@@ -1,27 +1,43 @@
 #![no_std]
 #![no_main]
 
-use panic_halt as _;
+use adafruit_motor_shield_v2::AdafruitMotorShieldV2;
+use arduino_hal::prelude::*;
 
 #[arduino_hal::entry]
 fn main() -> ! {
     let dp = arduino_hal::Peripherals::take().unwrap();
     let pins = arduino_hal::pins!(dp);
-
-    /*
-     * For examples (and inspiration), head to
-     *
-     *     https://github.com/Rahix/avr-hal/tree/main/examples
-     *
-     * NOTE: Not all examples were ported to all boards!  There is a good chance though, that code
-     * for a different board can be adapted for yours.  The Arduino Uno currently has the most
-     * examples available.
-     */
+    let mut serial = arduino_hal::default_serial!(dp, pins, 57600);
 
     let mut led = pins.d13.into_output();
+    led.set_high();
+
+    let mut i2c = arduino_hal::I2c::new(
+        dp.TWI,
+        pins.a4.into_pull_up_input(),
+        pins.a5.into_pull_up_input(),
+        1600,
+    );
+
+    let mut adafruit_motorshield = AdafruitMotorShieldV2::new(0x60, i2c);
+
+    ufmt::uwriteln!(&mut serial, "Set mode test:\r").unwrap_infallible();
+    let res = adafruit_motorshield.begin(1600);
+    match res {
+        Ok(_) => ufmt::uwriteln!(&mut serial, "Ok").unwrap_infallible(),
+        Err(_) => ufmt::uwriteln!(&mut serial, "Err").unwrap_infallible(),
+    }
 
     loop {
+        for i in (0..4094).step_by(15) {
+            let res = adafruit_motorshield.set_pwm(15, i);
+            if res.is_err() {
+                break;
+            }
+            arduino_hal::delay_ms(100);
+        }
+
         led.toggle();
-        arduino_hal::delay_ms(1000);
     }
 }
