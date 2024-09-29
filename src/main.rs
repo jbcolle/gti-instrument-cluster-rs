@@ -13,7 +13,7 @@ fn main() -> ! {
     let mut led = pins.d13.into_output();
     led.set_high();
 
-    let mut i2c = arduino_hal::I2c::new(
+    let i2c = arduino_hal::I2c::new(
         dp.TWI,
         pins.a4.into_pull_up_input(),
         pins.a5.into_pull_up_input(),
